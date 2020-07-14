@@ -15,17 +15,8 @@ repositories {
   jcenter()
 }
 
-//val developmentOnly by configurations.creating
-//configurations {
-//  runtimeClasspath {
-//    extendsFrom(developmentOnly)
-//  }
-//}
-
 dependencies {
   implementation(project(":app"))
-
-  implementation("io.github.microutils:kotlin-logging:1.7.10")
 
   implementation("org.springframework.boot:spring-boot-starter-web")
   implementation("org.springframework.boot:spring-boot-starter-data-jpa")
@@ -52,7 +43,7 @@ tasks {
   }
   processResources {
     dependsOn(":app:jsBrowserWebpack")
-    from(project(":app").projectDir.resolve("src/jsMain/resources")) {
+    from(project(":app").projectDir.resolve("src/commonMain/resources")) {
       into("static")
     }
     from(project(":app").buildDir.resolve("distributions/app.js")) {

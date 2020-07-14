@@ -1,5 +1,7 @@
-package dev.fritz2.frontend
+package app.frontend
 
+import app.model.L
+import app.model.ToDo
 import dev.fritz2.binding.*
 import dev.fritz2.dom.append
 import dev.fritz2.dom.html.HtmlElements
@@ -8,16 +10,15 @@ import dev.fritz2.dom.html.render
 import dev.fritz2.dom.key
 import dev.fritz2.dom.states
 import dev.fritz2.dom.values
-import dev.fritz2.lenses.Lens
-import dev.fritz2.lenses.buildLens
 import dev.fritz2.remote.body
+import dev.fritz2.remote.onErrorLog
 import dev.fritz2.remote.remote
 import dev.fritz2.routing.router
-import dev.fritz2.frontend.model.ToDo
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
-import kotlin.js.Json
+import kotlinx.serialization.UnstableDefault
+import kotlinx.serialization.builtins.list
+import kotlinx.serialization.json.Json
 
 data class Filter(val text: String, val function: (List<ToDo>) -> List<ToDo>)
 
@@ -27,34 +28,38 @@ val filters = mapOf(
     "/completed" to Filter("Completed") { toDos -> toDos.filter { it.completed } }
 )
 
-object L {
-    val completed: Lens<ToDo, Boolean> = buildLens("completed", { it.completed },{ p, v -> p.copy(completed = v)})
-
-    val editing: Lens<ToDo, Boolean> = buildLens("editing", { it.editing },{ p, v -> p.copy(editing = v)})
-
-    val text: Lens<ToDo, String> = buildLens("text", { it.text },{ p, v -> p.copy(text = v)})
-}
-
+@UnstableDefault
 @ExperimentalCoroutinesApi
 @FlowPreview
 fun main() {
     val router = router("/")
+    val api = remote("/api/todos")
+    val serializer = ToDo.serializer()
 
-    val toDos = object : RootStore<List<ToDo>>(emptyList()) {
+    val toDos = object : RootStore<List<ToDo>>(listOf(), id = "todos", dropInitialData = true) {
 
-//        val rest = remote("/todo")
-//        val json = Json(JsonConfiguration.Stable)
-//
-//        val load = apply<ToDo> {
-//            rest.get().body()
-//        }
+        val load = apply<Unit, List<ToDo>> { _ ->
+            api.get().onErrorLog().body().map {
+                Json.parse(serializer.list, it)
+            }
+        } andThen handle { _, toDos -> toDos }
 
-        val add = handle<String> { toDos, text ->
-            if (text.isNotEmpty()) toDos + ToDo(text)
-            else toDos
+        val add = apply<String, ToDo?> { text ->
+            if (text.isNotEmpty()) { //TODO: add validation
+                api.contentType("application/json")
+                    .body(Json.stringify(serializer, ToDo(text = text)))
+                    .post().onErrorLog().body().map {
+                        Json.parse(serializer, it)
+                    }
+            }
+            else flowOf(null)
+        } andThen handle { toDos, toDo ->
+            if(toDo != null) toDos + toDo else toDos
         }
 
-        val remove = handle<String> { toDos, id ->
+        val remove = apply<String, String> { id ->
+            api.delete(id).onErrorLog().map { id }
+        } andThen handle { toDos, id: String ->
             toDos.filterNot { it.id == id }
         }
 
@@ -68,11 +73,15 @@ fun main() {
 
         val count = data.map { todos -> todos.count { !it.completed } }.distinctUntilChanged()
         val allChecked = data.map { todos -> todos.isNotEmpty() && todos.all { it.completed } }.distinctUntilChanged()
+
+        init {
+            action() handledBy load
+        }
     }
 
     val inputHeader = render {
         header {
-            h1 { text("todos") }
+            h1 { +"todos" }
             input("new-todo") {
                 placeholder = const("What needs to be done?")
                 autofocus = const(true)
@@ -95,23 +104,23 @@ fun main() {
             }
             ul("todo-list") {
                 toDos.data.flatMapLatest { all ->
-                    router.routes.map { route ->
+                    router.routes. map { route ->
                         filters[route]?.function?.invoke(all) ?: all
                     }
-                }.each().map { toDo ->
-                    val toDoStore = toDos.sub(toDo)
-                    val textStore = toDoStore.sub(L.text)
-                    val completedStore = toDoStore.sub(L.completed)
-                    val editingStore = toDoStore.sub(L.editing)
+                }.each(ToDo::id).map { toDo ->
+                    val toDoStore = toDos.sub(toDo, ToDo::id)
+                    val textStore = toDoStore.sub(L.ToDo.text)
+                    val completedStore = toDoStore.sub(L.ToDo.completed)
+                    val editingStore = toDoStore.sub(L.ToDo.editing)
 
                     render {
                         li {
                             attr("data-id", toDoStore.id)
                             //TODO: better flatmap over editing and completed
-                            classMap = toDoStore.data.map { toDo: ToDo ->
+                            classMap = toDoStore.data.map {
                                 mapOf(
-                                    "completed" to toDo.completed,
-                                    "editing" to toDo.editing
+                                    "completed" to it.completed,
+                                    "editing" to it.editing
                                 )
                             }
                             div("view") {
@@ -127,14 +136,14 @@ fun main() {
                                     dblclicks.map { true } handledBy editingStore.update
                                 }
                                 button("destroy") {
-                                    clicks.events.map { toDo.id } handledBy toDos.remove //flatMapLatest { toDoStore.data }
+                                    clicks.events.map { toDo.id } handledBy toDos.remove
                                 }
                             }
                             input("edit") {
                                 value = textStore.data
                                 changes.values() handledBy textStore.update
 
-                                editingStore.data.map { isEditing: Boolean ->
+                                editingStore.data.map { isEditing ->
                                     if (isEditing) domNode.apply {
                                         focus()
                                         select()

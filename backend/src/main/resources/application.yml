@@ -1,1 +1,3 @@
-spring.application.name: fritz2-spring-boot
+spring:
+  application:
+    name: fritz2-spring-boot
