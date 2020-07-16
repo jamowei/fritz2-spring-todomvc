@@ -11,7 +11,7 @@ import com.soywiz.klock.wrapped.WDateTime
  * Extension methods to adapt between the shared app.model, and the persistence entities
  */
 
-@KlockExperimental
+@OptIn(KlockExperimental::class)
 fun ToDoEntity.toModel() = when(status) {
     ToDoStatusEntity.CompletedStatus -> {
         ToDo(
@@ -29,7 +29,7 @@ fun ToDoStatus.toStatusEntity() = when(this) {
     Uncompleted -> ToDoStatusEntity.UncompletedStatus
 }
 
-@KlockExperimental
+@OptIn(KlockExperimental::class)
 fun ToDoStatus.toCompletedDate() = when(this) {
     is Completed -> this.completedOn.unixMillisLong
     Uncompleted -> null

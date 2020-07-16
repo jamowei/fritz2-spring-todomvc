@@ -45,6 +45,9 @@ kotlin {
             dependencies {
                 implementation(kotlin("stdlib-jdk8"))
                 implementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime:${DepVers.serializationRuntimeVersion}")
+
+                implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.11.0")
+                implementation("com.fasterxml.jackson.core:jackson-annotations:2.11.0")
             }
         }
 

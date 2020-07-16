@@ -52,7 +52,7 @@ dependencies {
   testImplementation(kotlin("test-junit5"))
 
   testImplementation("org.junit.jupiter:junit-jupiter-api:${TestVers.junitVersion}")
-  runtimeOnly("org.junit.jupiter:junit-jupiter-engine:${TestVers.junitVersion}")
+  testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:${TestVers.junitVersion}")
 }
 
 tasks {

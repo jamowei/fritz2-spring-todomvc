@@ -1,8 +1,5 @@
-package app.backend.data
+package app.model
 
-import app.model.Completed
-import app.model.ToDo
-import app.model.Uncompleted
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import com.soywiz.klock.annotations.KlockExperimental
@@ -11,15 +8,14 @@ import kotlinx.serialization.UnstableDefault
 import kotlinx.serialization.json.Json
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.fail
 
 @KlockExperimental
 @OptIn(UnstableDefault::class)
-class ToDoJackson {
+class ToDoJacksonConverterTest {
 
     private val mapper = ObjectMapper()
         .also { it.registerModule(KotlinModule()) }
-        .also { it.registerModule(ToDoModule) }
+        .also { it.registerModule(TodoJacksonModule) }
 
     @Test
     fun `test that Jackson serialization is equivalent to kotlinx serialization for Completed`() {

@@ -1,5 +1,6 @@
 package app.model
 
+import com.soywiz.klock.annotations.KlockExperimental
 import com.soywiz.klock.wrapped.WDateTime
 import dev.fritz2.lenses.Lenses
 import kotlinx.serialization.*
@@ -22,6 +23,7 @@ sealed class ToDoStatus
  */
 @Lenses
 @Serializable
+@OptIn(KlockExperimental::class)
 data class Completed(
         @Serializable(with = DateTimeSerializer::class) val completedOn: WDateTime
 ): ToDoStatus() {
@@ -31,6 +33,13 @@ data class Completed(
         }
 }
 
+@Lenses
+@Serializable
+object Uncompleted: ToDoStatus()
+
+
+// TODO: Figure out why a customer Serializer is required
+@OptIn(KlockExperimental::class)
 object DateTimeSerializer : KSerializer<WDateTime> {
         override val descriptor: SerialDescriptor
                 get() = PrimitiveDescriptor("DateTime", PrimitiveKind.DOUBLE)
@@ -38,7 +47,3 @@ object DateTimeSerializer : KSerializer<WDateTime> {
         override fun deserialize(decoder: Decoder) = WDateTime.fromUnix(decoder.decodeLong())
         override fun serialize(encoder: Encoder, value: WDateTime) = encoder.encodeLong(value.unixMillisLong)
 }
-
-@Lenses
-@Serializable
-object Uncompleted: ToDoStatus()
