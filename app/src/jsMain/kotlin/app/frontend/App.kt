@@ -1,7 +1,6 @@
 package app.frontend
 
-import app.model.L
-import app.model.ToDo
+import app.model.*
 import dev.fritz2.binding.*
 import dev.fritz2.dom.append
 import dev.fritz2.dom.html.HtmlElements
@@ -20,12 +19,12 @@ import kotlinx.serialization.UnstableDefault
 import kotlinx.serialization.builtins.list
 import kotlinx.serialization.json.Json
 
-data class Filter(val text: String, val function: (List<ToDo>) -> List<ToDo>)
+data class Filter(val text: String, val function: (List<ToDoBrowser>) -> List<ToDoBrowser>)
 
 val filters = mapOf(
     "/" to Filter("All") { it },
-    "/active" to Filter("Active") { toDos -> toDos.filter { !it.completed } },
-    "/completed" to Filter("Completed") { toDos -> toDos.filter { it.completed } }
+    "/active" to Filter("Active") { toDos -> toDos.filter { it.toDo.status is Uncompleted } },
+    "/completed" to Filter("Completed") { toDos -> toDos.filter { it.toDo.status is Completed } }
 )
 
 @UnstableDefault
@@ -36,20 +35,22 @@ fun main() {
     val api = remote("/api/todos")
     val serializer = ToDo.serializer()
 
-    val toDos = object : RootStore<List<ToDo>>(listOf(), id = "todos", dropInitialData = true) {
+    val toDos = object : RootStore<List<ToDoBrowser>>(listOf(), id = "todos", dropInitialData = true) {
 
-        val load = apply<Unit, List<ToDo>> { _ ->
-            api.get().onErrorLog().body().map {
-                Json.parse(serializer.list, it)
+        val load = apply<Unit, List<ToDoBrowser>> { _ ->
+            api.get().onErrorLog().body().map { str ->
+                Json.parse(serializer.list, str).map { ToDoBrowser(it, false) }
             }
         } andThen handle { _, toDos -> toDos }
 
-        val add = apply<String, ToDo?> { text ->
+        val add = apply<String, ToDoBrowser?> { text ->
             if (text.isNotEmpty()) { //TODO: add validation
+                val content = Json.stringify(serializer, ToDo(text = text))
+                println(content)
                 api.contentType("application/json")
-                    .body(Json.stringify(serializer, ToDo(text = text)))
+                    .body(content)
                     .post().onErrorLog().body().map {
-                        Json.parse(serializer, it)
+                        Json.parse(serializer, it).run { ToDoBrowser(this, false) }
                     }
             }
             else flowOf(null)
@@ -60,19 +61,20 @@ fun main() {
         val remove = apply<String, String> { id ->
             api.delete(id).onErrorLog().map { id }
         } andThen handle { toDos, id: String ->
-            toDos.filterNot { it.id == id }
+            toDos.filterNot { it.toDo.id == id }
         }
 
         val toggleAll = handle<Boolean> { toDos, toggle ->
-            toDos.map { it.copy(completed = toggle) }
+            val status = if (toggle) Completed.now() else Uncompleted
+            toDos.map { it.copy(toDo = it.toDo.copy(status = status)) }
         }
 
         val clearCompleted = handle { toDos ->
-            toDos.filterNot { it.completed }
+            toDos.filterNot { it.toDo.status is Completed }
         }
 
-        val count = data.map { todos -> todos.count { !it.completed } }.distinctUntilChanged()
-        val allChecked = data.map { todos -> todos.isNotEmpty() && todos.all { it.completed } }.distinctUntilChanged()
+        val count = data.map { todos -> todos.count { it.toDo.status is Uncompleted } }.distinctUntilChanged()
+        val allChecked = data.map { todos -> todos.isNotEmpty() && todos.all { it.toDo.status is Completed } }.distinctUntilChanged()
 
         init {
             action() handledBy load
@@ -104,31 +106,32 @@ fun main() {
             }
             ul("todo-list") {
                 toDos.data.flatMapLatest { all ->
-                    router.routes. map { route ->
+                    router.routes.map { route ->
                         filters[route]?.function?.invoke(all) ?: all
                     }
-                }.each(ToDo::id).map { toDo ->
-                    val toDoStore = toDos.sub(toDo, ToDo::id)
+                }.each{ it.toDo.id }.map { toDo ->
+                    val browserStore = toDos.sub(toDo, { it.toDo.id })
+                    val toDoStore = browserStore.sub(L.ToDoBrowser.toDo)
                     val textStore = toDoStore.sub(L.ToDo.text)
-                    val completedStore = toDoStore.sub(L.ToDo.completed)
-                    val editingStore = toDoStore.sub(L.ToDo.editing)
+                    val statusStore = toDoStore.sub(L.ToDo.status)
+                    val editingStore = browserStore.sub(L.ToDoBrowser.editing)
 
                     render {
                         li {
-                            attr("data-id", toDoStore.id)
-                            //TODO: better flatmap over editing and completed
-                            classMap = toDoStore.data.map {
+                            attr("data-id", browserStore.id)
+                            //TODO: better flatmap over editing and status
+                            classMap = browserStore.data.map {
                                 mapOf(
-                                    "completed" to it.completed,
+                                    "completed" to (it.toDo.status is Completed),
                                     "editing" to it.editing
                                 )
                             }
                             div("view") {
                                 input("toggle") {
                                     type = const("checkbox")
-                                    checked = completedStore.data
+                                    checked = statusStore.data.map { it is Completed }
 
-                                    changes.states() handledBy completedStore.update
+                                    changes.states().map { if (it) Completed.now() else Uncompleted } handledBy statusStore.update
                                 }
                                 label {
                                     textStore.data.bind()
@@ -136,7 +139,7 @@ fun main() {
                                     dblclicks.map { true } handledBy editingStore.update
                                 }
                                 button("destroy") {
-                                    clicks.events.map { toDo.id } handledBy toDos.remove
+                                    clicks.events.map { toDo.toDo.id } handledBy toDos.remove
                                 }
                             }
                             input("edit") {

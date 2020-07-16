@@ -1,8 +1,12 @@
 package app.backend
 
+import app.backend.data.ToDoEntity
+import app.backend.data.ToDoRepository
 import org.springframework.boot.Banner
+import org.springframework.boot.CommandLineRunner
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication
+import org.springframework.context.annotation.Bean
 import org.springframework.stereotype.Controller
 import org.springframework.web.bind.annotation.GetMapping
 
@@ -10,18 +14,16 @@ import org.springframework.web.bind.annotation.GetMapping
 @Controller
 class Application {
 
-
     @GetMapping
-    fun start(): String = "index.html"
+    suspend fun start(): String = "index.html"
 
-    // fill db with some data on startup
-//    @Bean
-//    fun fillDB(repository: ToDoRepository) = CommandLineRunner {
-//        repository.save(ToDoEntity(text = "making fritz2 great"))
-//        repository.save(ToDoEntity(text = "fixed as much bugs as possible"))
-//        repository.save(ToDoEntity(text = "build some new examples with fritz2"))
-//        repository.save(ToDoEntity(text = "produce better code"))
-//    }
+    @Bean
+    fun prepopulateDb(repository: ToDoRepository) = CommandLineRunner {
+        repository.save(ToDoEntity(text = "making fritz2 great...."))
+        repository.save(ToDoEntity(text = "fixed as much bugs as possible"))
+        repository.save(ToDoEntity(text = "build some new examples with fritz2"))
+        repository.save(ToDoEntity(text = "produce better code"))
+    }
 
 }
 
