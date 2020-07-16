@@ -1,7 +1,7 @@
 package app.backend
 
-import app.backend.data.ToDoEntity
-import app.backend.data.ToDoRepository
+import app.backend.persistence.ToDoEntity
+import app.backend.persistence.ToDoRepository
 import org.springframework.boot.Banner
 import org.springframework.boot.CommandLineRunner
 import org.springframework.boot.autoconfigure.SpringBootApplication

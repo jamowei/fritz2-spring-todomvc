@@ -1,4 +1,4 @@
-package app.backend.data
+package app.backend.persistence
 
 import app.model.Completed
 import app.model.ToDo

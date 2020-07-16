@@ -1,4 +1,4 @@
-package app.backend.data
+package app.backend.persistence
 
 import org.springframework.data.repository.CrudRepository
 
