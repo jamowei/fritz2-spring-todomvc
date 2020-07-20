@@ -19,21 +19,21 @@ class ToDoJacksonConverterTest {
 
     @Test
     fun `test that Jackson serialization is equivalent to kotlinx serialization for Completed`() {
-        val todoCompleted = ToDo("12", "abc", Completed(WDateTime.now()), false)
+        val todoCompleted = ToDo("12", "abc", Completed(WDateTime.now()))
 
         assertEquals(Json.stringify(ToDo.serializer(), todoCompleted), mapper.writeValueAsString(todoCompleted))
     }
 
     @Test
     fun `test that Jackson serialization is equivalent to kotlinx serialization for Uncompleted`() {
-        val todoUncompleted = ToDo("12", "abc", Uncompleted, false)
+        val todoUncompleted = ToDo("12", "abc", Uncompleted)
 
         assertEquals(Json.stringify(ToDo.serializer(), todoUncompleted), mapper.writeValueAsString(todoUncompleted))
     }
 
     @Test
     fun `test that Jackson and kotlinx deserialize Uncompleted in the same way`() {
-        val uncompleted = ToDo("12", "abc", Uncompleted, false)
+        val uncompleted = ToDo("12", "abc", Uncompleted)
         val str = Json.stringify(ToDo.serializer(), uncompleted)
 
         // Round-trip jackson

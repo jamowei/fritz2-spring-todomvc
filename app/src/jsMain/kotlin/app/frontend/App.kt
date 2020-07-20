@@ -19,12 +19,12 @@ import kotlinx.serialization.UnstableDefault
 import kotlinx.serialization.builtins.list
 import kotlinx.serialization.json.Json
 
-data class Filter(val text: String, val function: (List<ToDoBrowser>) -> List<ToDoBrowser>)
+data class Filter(val text: String, val function: (List<ToDo>) -> List<ToDo>)
 
 val filters = mapOf(
     "/" to Filter("All") { it },
-    "/active" to Filter("Active") { toDos -> toDos.filter { it.toDo.status is Uncompleted } },
-    "/completed" to Filter("Completed") { toDos -> toDos.filter { it.toDo.status is Completed } }
+    "/active" to Filter("Active") { toDos -> toDos.filter { it.status is Uncompleted } },
+    "/completed" to Filter("Completed") { toDos -> toDos.filter { it.status is Completed } }
 )
 
 @UnstableDefault
@@ -35,50 +35,91 @@ fun main() {
     val api = remote("/api/todos")
     val serializer = ToDo.serializer()
 
-    val toDos = object : RootStore<List<ToDoBrowser>>(listOf(), id = "todos", dropInitialData = true) {
-
-        val load = apply<Unit, List<ToDoBrowser>> { _ ->
-            api.get().onErrorLog().body().map { str ->
-                Json.parse(serializer.list, str).map { ToDoBrowser(it, false) }
+    val uiStateStore = object : RootStore<List<TodoTableModel>>(emptyList(), id="uistate", dropInitialData = true) {
+        val load = handle { _, states: List<ToDo> ->
+            println("Loaded UI states")
+            states.map { todo ->
+                TodoTableModel(todo.id, false)
             }
-        } andThen handle { _, toDos -> toDos }
+        }
 
-        val add = apply<String, ToDoBrowser?> { text ->
+        val add = handle { states, state: ToDo ->
+            println("Added ${state.id} to uiState")
+            states + TodoTableModel(state.id, false)
+        }
+
+        val remove = handle { states, id: String ->
+            println("Removed ${id} from uiState")
+            states.filterNot { it.id == id }
+        }
+    }
+
+    val toDos = object : RootStore<List<ToDo>>(listOf(), id = "todos", dropInitialData = true) {
+
+        // TODO https://github.com/jwstegemann/fritz2/issues/126
+        val loadOfferer = handleAndOffer<List<ToDo>, List<ToDo>> { _, toDos ->
+            offer(toDos)
+            toDos
+        }
+        val load = apply<Unit, List<ToDo>> { _ ->
+            api.get().onErrorLog().body().map { str ->
+                Json.parse(serializer.list, str)
+            }
+        } andThen loadOfferer
+
+        // TODO https://github.com/jwstegemann/fritz2/issues/126
+        val addOfferer = handleAndOffer<ToDo?, ToDo> { state, toDo: ToDo? ->
+            if (toDo != null) {
+                offer(toDo)
+                state + toDo
+            } else state
+        }
+
+        val add = apply<String, ToDo?> { text ->
             if (text.isNotEmpty()) { //TODO: add validation
                 val content = Json.stringify(serializer, ToDo(text = text))
                 println(content)
                 api.contentType("application/json")
                     .body(content)
                     .post().onErrorLog().body().map {
-                        Json.parse(serializer, it).run { ToDoBrowser(this, false) }
+                        Json.parse(serializer, it)
                     }
             }
             else flowOf(null)
-        } andThen handle { toDos, toDo ->
-            if(toDo != null) toDos + toDo else toDos
-        }
+        } andThen addOfferer
 
-        val remove = apply<String, String> { id ->
-            api.delete(id).onErrorLog().map { id }
-        } andThen handle { toDos, id: String ->
-            toDos.filterNot { it.toDo.id == id }
+        // TODO https://github.com/jwstegemann/fritz2/issues/126
+        val removeOfferer = handleAndOffer<String, String> { state, id: String ->
+            val newState = state.filterNot { it.id == id }
+            offer(id)
+            newState
         }
+        val remove = apply<String, String> { id ->
+            println("Removed TODO $id")
+            api.delete(id).onErrorLog().map { id }
+        } andThen removeOfferer
 
         val toggleAll = handle<Boolean> { toDos, toggle ->
             val status = if (toggle) Completed.now() else Uncompleted
-            toDos.map { it.copy(toDo = it.toDo.copy(status = status)) }
+            toDos.map { it.copy(status = status) }
         }
 
+        // TODO: Should do a corresponding cleanup of the UI-state store
         val clearCompleted = handle { toDos ->
-            toDos.filterNot { it.toDo.status is Completed }
+            toDos.filterNot { it.status is Completed }
         }
 
-        val count = data.map { todos -> todos.count { it.toDo.status is Uncompleted } }.distinctUntilChanged()
-        val allChecked = data.map { todos -> todos.isNotEmpty() && todos.all { it.toDo.status is Completed } }.distinctUntilChanged()
+        val count = data.map { todos -> todos.count { it.status is Uncompleted } }.distinctUntilChanged()
+        val allChecked = data.map { todos -> todos.isNotEmpty() && todos.all { it.status is Completed } }.distinctUntilChanged()
 
         init {
             action() handledBy load
         }
+    }.also {
+        // Link events in the main store to the UI state store
+        it.loadOfferer handledBy uiStateStore.load
+        it.addOfferer handledBy uiStateStore.add
+        it.removeOfferer handledBy uiStateStore.remove
     }
 
     val inputHeader = render {
@@ -109,21 +150,35 @@ fun main() {
                     router.routes.map { route ->
                         filters[route]?.function?.invoke(all) ?: all
                     }
-                }.each{ it.toDo.id }.map { toDo ->
-                    val browserStore = toDos.sub(toDo, { it.toDo.id })
-                    val toDoStore = browserStore.sub(L.ToDoBrowser.toDo)
-                    val textStore = toDoStore.sub(L.ToDo.text)
-                    val statusStore = toDoStore.sub(L.ToDo.status)
-                    val editingStore = browserStore.sub(L.ToDoBrowser.editing)
+                }
+                // Combine events from the two stores into a Pair
+                .combine(uiStateStore.data) { todos, uiState ->
+                    val states = uiState.map { it.id to it }.toMap()
+
+                    todos.map { todo ->
+                        todo to states.getOrElse(todo.id) {
+                            println("Couldn't find UI State for ID ${todo.id}, using default")
+                            TodoTableModel(todo.id, false)
+                        }
+                    }
+                }
+                .each { it.first.id }.map { combined ->
+                    val toDo = combined.first
+
+                    val todoLineStore = toDos.sub(toDo, { it.id })
+                    val textStore = todoLineStore.sub(L.ToDo.text)
+                    val statusStore = todoLineStore.sub(L.ToDo.status)
+
+                    val stateLineStore = uiStateStore.sub(combined.second, { it.id })
+                    val uiEditingStore = stateLineStore.sub(L.TodoTableModel.editing)
 
                     render {
                         li {
-                            attr("data-id", browserStore.id)
-                            //TODO: better flatmap over editing and status
-                            classMap = browserStore.data.map {
+                            attr("data-id", todoLineStore.id)
+                            classMap = todoLineStore.data.combine(stateLineStore.data) { todo, state ->
                                 mapOf(
-                                    "completed" to (it.toDo.status is Completed),
-                                    "editing" to it.editing
+                                    "completed" to (todo.status is Completed),
+                                    "editing" to state.editing
                                 )
                             }
                             div("view") {
@@ -136,17 +191,17 @@ fun main() {
                                 label {
                                     textStore.data.bind()
 
-                                    dblclicks.map { true } handledBy editingStore.update
+                                    dblclicks.map { true } handledBy uiEditingStore.update
                                 }
                                 button("destroy") {
-                                    clicks.events.map { toDo.toDo.id } handledBy toDos.remove
+                                    clicks.events.map { toDo.id } handledBy toDos.remove
                                 }
                             }
                             input("edit") {
                                 value = textStore.data
                                 changes.values() handledBy textStore.update
 
-                                editingStore.data.map { isEditing ->
+                                uiEditingStore.data.map { isEditing ->
                                     if (isEditing) domNode.apply {
                                         focus()
                                         select()
@@ -156,7 +211,7 @@ fun main() {
                                 merge(
                                     blurs.map { false },
                                     keyups.key().filter { it.isKey(Keys.Enter) }.map { false }
-                                ) handledBy editingStore.update
+                                ) handledBy uiEditingStore.update
                             }
                         }
                     }

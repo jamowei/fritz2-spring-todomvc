@@ -10,8 +10,7 @@ import kotlinx.serialization.*
 data class ToDo(
         val id: String = "-1",
         val text: String = "",
-        val status: ToDoStatus = Uncompleted,
-        val editing: Boolean = false
+        val status: ToDoStatus = Uncompleted
 )
 
 @Lenses
@@ -38,7 +37,7 @@ data class Completed(
 object Uncompleted: ToDoStatus()
 
 
-// TODO: Figure out why a customer Serializer is required
+// TODO: Figure out why a custom Serializer is required
 @OptIn(KlockExperimental::class)
 object DateTimeSerializer : KSerializer<WDateTime> {
         override val descriptor: SerialDescriptor

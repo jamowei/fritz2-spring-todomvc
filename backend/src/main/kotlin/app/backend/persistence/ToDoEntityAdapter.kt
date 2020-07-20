@@ -17,11 +17,10 @@ fun ToDoEntity.toModel() = when(status) {
         ToDo(
             id.toString(),
             text,
-            Completed(WDateTime(completedDate!!)),
-            editing
+            Completed(WDateTime(completedDate!!))
         )
     }
-    ToDoStatusEntity.UncompletedStatus -> ToDo(id.toString(), text, Uncompleted, editing)
+    ToDoStatusEntity.UncompletedStatus -> ToDo(id.toString(), text, Uncompleted)
 }
 
 fun ToDoStatus.toStatusEntity() = when(this) {
@@ -39,6 +38,5 @@ fun ToDo.toEntity() = ToDoEntity(
     this.id.toLong(),
     this.text,
     this.status.toStatusEntity(),
-    this.status.toCompletedDate(),
-    this.editing
+    this.status.toCompletedDate()
 )
