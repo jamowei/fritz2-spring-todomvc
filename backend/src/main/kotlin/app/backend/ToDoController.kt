@@ -3,9 +3,8 @@ package app.backend
 import app.backend.persistence.ToDoRepository
 import app.backend.persistence.toEntity
 import app.backend.persistence.toModel
-import app.model.ToDo
 import app.model.ToDoValidator
-import app.model.UnvalidatedTodo
+import app.model.UnvalidatedToDo
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 
@@ -19,7 +18,7 @@ class ToDoController(val repo: ToDoRepository) {
     fun findById(@PathVariable id: String) = repo.findById(id.toLong())
 
     @PostMapping
-    fun save(@RequestBody toDo: UnvalidatedTodo): ResponseEntity<*> {
+    fun save(@RequestBody toDo: UnvalidatedToDo): ResponseEntity<*> {
         val validationMessages = ToDoValidator.validate(toDo, null)
 
         if (validationMessages.isEmpty()) {

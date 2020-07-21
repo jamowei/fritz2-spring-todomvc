@@ -19,7 +19,7 @@ data class ToDo(
 /**
  * Represents the object in an unvalidated state
  */
-data class UnvalidatedTodo(
+data class UnvalidatedToDo(
         val id: String = "-1",
         val text: String,
         val status: ToDoStatus = Uncompleted
@@ -61,21 +61,21 @@ object DateTimeSerializer : KSerializer<WDateTime> {
         override fun serialize(encoder: Encoder, value: WDateTime) = encoder.encodeLong(value.unixMillisLong)
 }
 
-inline class TodoValidatorMessage(val msg : String): ValidationMessage {
+inline class ToDoValidatorMessage(val msg : String): ValidationMessage {
         override fun failed(): Boolean {
                 return true
         }
 }
 
-object ToDoValidator : Validator<UnvalidatedTodo, TodoValidatorMessage, String?>() {
-        override fun validate(data: UnvalidatedTodo, metadata: String?): List<TodoValidatorMessage> {
-                val msgs = mutableListOf<TodoValidatorMessage>()
+object ToDoValidator : Validator<UnvalidatedToDo, ToDoValidatorMessage, String?>() {
+        override fun validate(data: UnvalidatedToDo, metadata: String?): List<ToDoValidatorMessage> {
+                val msgs = mutableListOf<ToDoValidatorMessage>()
 
                 if (data.text.length < 5) {
-                        msgs += TodoValidatorMessage("Text length must be at least 5 characters")
+                        msgs += ToDoValidatorMessage("Text length must be at least 5 characters")
                 }
                 if (data.text.contains("'")) {
-                        msgs += TodoValidatorMessage("Text cannot contain the ' character")
+                        msgs += ToDoValidatorMessage("Text cannot contain the ' character")
                 }
 
                 return msgs

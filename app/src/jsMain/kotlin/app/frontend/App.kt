@@ -14,7 +14,6 @@ import dev.fritz2.remote.onErrorLog
 import dev.fritz2.remote.remote
 import dev.fritz2.routing.router
 import dev.fritz2.validation.Validation
-import dev.fritz2.validation.Validator
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import kotlinx.serialization.UnstableDefault
@@ -37,17 +36,18 @@ fun main() {
     val api = remote("/api/todos")
     val serializer = ToDo.serializer()
 
-    val uiStateStore = object : RootStore<List<TodoTableState>>(emptyList(), id="uistate", dropInitialData = true) {
+    // The uiStateStore contains state specific to the frontend, which does not belong in the common model
+    val uiStateStore = object : RootStore<List<ToDoUiState>>(emptyList(), id="uistate", dropInitialData = true) {
         val load = handle { _, states: List<ToDo> ->
             println("Loaded UI states")
             states.map { todo ->
-                TodoTableState(todo.id, false)
+                ToDoUiState(todo.id, false)
             }
         }
 
         val add = handle { states, state: ToDo ->
             println("Added ${state.id} to uiState")
-            states + TodoTableState(state.id, false)
+            states + ToDoUiState(state.id, false)
         }
 
         val remove = handle { states, id: String ->
@@ -56,8 +56,9 @@ fun main() {
         }
     }
 
+    // Contains the list of TODOs
     val toDos = object : RootStore<List<ToDo>>(listOf(), id = "todos", dropInitialData = true),
-        Validation<UnvalidatedTodo, TodoValidatorMessage, String?> {
+        Validation<UnvalidatedToDo, ToDoValidatorMessage, String?> {
 
         override val validator = ToDoValidator
 
@@ -80,7 +81,7 @@ fun main() {
             } else state
         }
         val add = apply<String, ToDo?> { text ->
-            val maybeTodo = UnvalidatedTodo(text = text)
+            val maybeTodo = UnvalidatedToDo(text = text)
 
             if (validate(maybeTodo, null)) {
                 val content = Json.stringify(serializer, maybeTodo.toValidated())
@@ -188,7 +189,7 @@ fun main() {
                     todos.map { todo ->
                         todo to states.getOrElse(todo.id) {
                             println("Couldn't find UI State for ID ${todo.id}, using default")
-                            TodoTableState(todo.id, false)
+                            ToDoUiState(todo.id, false)
                         }
                     }
                 }
@@ -200,7 +201,7 @@ fun main() {
                     val statusStore = todoLineStore.sub(L.ToDo.status)
 
                     val stateLineStore = uiStateStore.sub(combined.second, { it.id })
-                    val uiEditingStore = stateLineStore.sub(L.TodoTableState.editing)
+                    val uiEditingStore = stateLineStore.sub(L.ToDoUiState.editing)
 
                     render {
                         li {
