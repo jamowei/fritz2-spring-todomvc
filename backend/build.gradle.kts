@@ -40,13 +40,14 @@ dependencies {
   //  implementation("de.classyfi.boot:spring-kotlinx-serialization-starter-webflux:0.0.1-20200318")
 
   implementation("com.soywiz.korlibs.klock:klock:${DepVers.klockVersion}")
-
-  developmentOnly("org.springframework.boot:spring-boot-devtools")
+  implementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime:${DepVers.serializationRuntimeVersion}")
+  implementation("dev.fritz2:core-jvm:${PluginVers.fritz2GradleVersion}")
 
   runtimeOnly("com.h2database:h2")
 
-  implementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime:${DepVers.serializationRuntimeVersion}")
+  developmentOnly("org.springframework.boot:spring-boot-devtools")
 
+  // Test
   testImplementation("org.springframework.boot:spring-boot-starter-test")
   testImplementation(kotlin("test-annotations-common"))
   testImplementation(kotlin("test-junit5"))

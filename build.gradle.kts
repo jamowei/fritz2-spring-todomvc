@@ -10,6 +10,8 @@ plugins {
   kotlin("js") version kotlinVersion apply false
   kotlin("jvm") version kotlinVersion apply false
   kotlin("plugin.serialization") version kotlinVersion apply false
+
+  id("dev.fritz2.fritz2-gradle") version PluginVers.fritz2GradleVersion
 }
 
 subprojects {

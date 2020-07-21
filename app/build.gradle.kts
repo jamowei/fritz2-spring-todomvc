@@ -2,7 +2,7 @@ plugins {
     kotlin("multiplatform")
     kotlin("plugin.serialization")
 
-    id("dev.fritz2.fritz2-gradle") version PluginVers.fritz2GradleVersion
+    id("dev.fritz2.fritz2-gradle")
 }
 
 repositories {

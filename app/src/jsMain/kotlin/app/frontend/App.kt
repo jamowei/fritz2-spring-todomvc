@@ -13,6 +13,8 @@ import dev.fritz2.remote.body
 import dev.fritz2.remote.onErrorLog
 import dev.fritz2.remote.remote
 import dev.fritz2.routing.router
+import dev.fritz2.validation.Validation
+import dev.fritz2.validation.Validator
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import kotlinx.serialization.UnstableDefault
@@ -35,17 +37,17 @@ fun main() {
     val api = remote("/api/todos")
     val serializer = ToDo.serializer()
 
-    val uiStateStore = object : RootStore<List<TodoTableModel>>(emptyList(), id="uistate", dropInitialData = true) {
+    val uiStateStore = object : RootStore<List<TodoTableState>>(emptyList(), id="uistate", dropInitialData = true) {
         val load = handle { _, states: List<ToDo> ->
             println("Loaded UI states")
             states.map { todo ->
-                TodoTableModel(todo.id, false)
+                TodoTableState(todo.id, false)
             }
         }
 
         val add = handle { states, state: ToDo ->
             println("Added ${state.id} to uiState")
-            states + TodoTableModel(state.id, false)
+            states + TodoTableState(state.id, false)
         }
 
         val remove = handle { states, id: String ->
@@ -54,7 +56,10 @@ fun main() {
         }
     }
 
-    val toDos = object : RootStore<List<ToDo>>(listOf(), id = "todos", dropInitialData = true) {
+    val toDos = object : RootStore<List<ToDo>>(listOf(), id = "todos", dropInitialData = true),
+        Validation<UnvalidatedTodo, TodoValidatorMessage, String?> {
+
+        override val validator = ToDoValidator
 
         // TODO https://github.com/jwstegemann/fritz2/issues/126
         val loadOfferer = handleAndOffer<List<ToDo>, List<ToDo>> { _, toDos ->
@@ -74,10 +79,11 @@ fun main() {
                 state + toDo
             } else state
         }
-
         val add = apply<String, ToDo?> { text ->
-            if (text.isNotEmpty()) { //TODO: add validation
-                val content = Json.stringify(serializer, ToDo(text = text))
+            val maybeTodo = UnvalidatedTodo(text = text)
+
+            if (validate(maybeTodo, null)) {
+                val content = Json.stringify(serializer, maybeTodo.toValidated())
                 println(content)
                 api.contentType("application/json")
                     .body(content)
@@ -112,6 +118,8 @@ fun main() {
         val count = data.map { todos -> todos.count { it.status is Uncompleted } }.distinctUntilChanged()
         val allChecked = data.map { todos -> todos.isNotEmpty() && todos.all { it.status is Completed } }.distinctUntilChanged()
 
+        val validationMessages = msgs()
+
         init {
             action() handledBy load
         }
@@ -125,6 +133,28 @@ fun main() {
     val inputHeader = render {
         header {
             h1 { +"todos" }
+            div {
+                toDos.validationMessages.map { warnings ->
+                    warnings.map { it.msg }
+                }
+                .map {
+                    render {
+                        div {
+                            if (it.isNotEmpty()) {
+                                div("warnings") {
+                                    ul {
+                                        it.map { warning ->
+                                            li {
+                                                text(warning)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }.bind()
+            }
             input("new-todo") {
                 placeholder = const("What needs to be done?")
                 autofocus = const(true)
@@ -158,7 +188,7 @@ fun main() {
                     todos.map { todo ->
                         todo to states.getOrElse(todo.id) {
                             println("Couldn't find UI State for ID ${todo.id}, using default")
-                            TodoTableModel(todo.id, false)
+                            TodoTableState(todo.id, false)
                         }
                     }
                 }
@@ -170,7 +200,7 @@ fun main() {
                     val statusStore = todoLineStore.sub(L.ToDo.status)
 
                     val stateLineStore = uiStateStore.sub(combined.second, { it.id })
-                    val uiEditingStore = stateLineStore.sub(L.TodoTableModel.editing)
+                    val uiEditingStore = stateLineStore.sub(L.TodoTableState.editing)
 
                     render {
                         li {
@@ -199,6 +229,7 @@ fun main() {
                             }
                             input("edit") {
                                 value = textStore.data
+                                // TODO: Apply validation rules on edit
                                 changes.values() handledBy textStore.update
 
                                 uiEditingStore.data.map { isEditing ->
