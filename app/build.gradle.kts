@@ -1,7 +1,7 @@
 plugins {
   kotlin("multiplatform")
   kotlin("plugin.serialization")
-  id("dev.fritz2.fritz2-gradle") version "0.6"
+  id("dev.fritz2.fritz2-gradle")
 }
 
 repositories {
@@ -26,26 +26,25 @@ kotlin {
 
   sourceSets {
 
-    val serialization_version = "0.20.0"
-
     val commonMain by getting {
       dependencies {
         implementation(kotlin("stdlib"))
-        implementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime-common:$serialization_version")
+        implementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime-common:${project.extra.get("serializationVersion")}")
+        implementation("dev.fritz2:core:${project.extra.get("fritz2Version")}")
       }
     }
 
     val jsMain by getting {
       dependencies {
         implementation(kotlin("stdlib-js"))
-        implementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime-js:$serialization_version")
+        implementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime-js:${project.extra.get("serializationVersion")}")
       }
     }
 
     val jvmMain by getting {
       dependencies {
         implementation(kotlin("stdlib-jdk8"))
-        implementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime:$serialization_version")
+        implementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime:${project.extra.get("serializationVersion")}")
       }
     }
 
