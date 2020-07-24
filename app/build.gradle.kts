@@ -21,7 +21,7 @@ kotlin {
       dependencies {
         implementation(kotlin("stdlib"))
         implementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime-common:${project.extra.get("serializationVersion")}")
-        implementation("dev.fritz2:core:${project.extra.get("fritz2Version")}")
+        api("dev.fritz2:core:${project.extra.get("fritz2Version")}")
       }
     }
 
@@ -42,6 +42,12 @@ kotlin {
     val jsTest by getting {
       dependencies {
         implementation(kotlin("test-js"))
+      }
+    }
+
+    val jvmMain by getting {
+      dependencies {
+        implementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime:${project.extra.get("serializationVersion")}")
       }
     }
   }
