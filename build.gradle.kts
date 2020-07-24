@@ -7,11 +7,10 @@ allprojects {
 
 subprojects {
 
-
   repositories {
     jcenter()
     mavenCentral()
-    // TODO: remove if fritz2 0.7 is released
+    // FIXME: remove if fritz2 0.7 is released
     maven("https://oss.jfrog.org/artifactory/jfrog-dependencies")
   }
 
