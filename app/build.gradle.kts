@@ -7,22 +7,13 @@ plugins {
 repositories {
   mavenCentral()
   jcenter()
+  // FIXME: remove if fritz2 0.7 is released
+  maven("https://oss.jfrog.org/artifactory/jfrog-dependencies")
 }
 
 kotlin {
   jvm()
-  js {
-    browser {
-//      runTask {
-//        devServer = KotlinWebpackConfig.DevServer(
-//          open = true,
-//          port = 3000,
-//          proxy = mapOf("/todo/*" to "http://localhost:8080/todo"),
-//          contentBase = listOf("$buildDir/distributions")
-//        )
-//      }
-    }
-  }
+  js().browser()
 
   sourceSets {
 
@@ -31,6 +22,13 @@ kotlin {
         implementation(kotlin("stdlib"))
         implementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime-common:${project.extra.get("serializationVersion")}")
         implementation("dev.fritz2:core:${project.extra.get("fritz2Version")}")
+      }
+    }
+
+    val commonTest by getting {
+      dependencies {
+        implementation(kotlin("test-common"))
+        implementation(kotlin("test-annotations-common"))
       }
     }
 

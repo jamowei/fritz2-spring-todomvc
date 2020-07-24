@@ -16,7 +16,6 @@ subprojects {
   }
 
   extra.set("fritz2Version", "0.7-SNAPSHOT")
-  extra.set("fritz2GradleVersion", "0.6")
   extra.set("serializationVersion", "0.20.0")
 }
 
