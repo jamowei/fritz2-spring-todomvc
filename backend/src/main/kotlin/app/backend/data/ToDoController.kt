@@ -40,17 +40,15 @@ class ToDoController(val repo: ToDoRepository) {
         }
 
     @PutMapping("/{id}")
-    fun update(@PathVariable id: Long, @RequestBody newToDo: ToDoEntity): ResponseEntity<Any> {
-        val oldToDo = repo.findById(id)
-        if (oldToDo.isEmpty) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(mapOf("error" to "invalid id"))
+    fun update(@PathVariable id: Long, @RequestBody newToDo: ToDoEntity): ResponseEntity<*> =
+        if (repo.findById(id).isEmpty) {
+            ResponseEntity.status(HttpStatus.BAD_REQUEST).body(mapOf("error" to "invalid id"))
         } else if(!ToDoValidator.isValid(newToDo.toToDo(), Unit)) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(mapOf("error" to "data is not valid"))
+            ResponseEntity.status(HttpStatus.BAD_REQUEST).body(mapOf("error" to "data is not valid"))
         } else {
             logger.info("update ToDo with $id to: $newToDo")
-            return ResponseEntity.status(HttpStatus.CREATED).body(repo.save(newToDo.copy(id = id)))
+            ResponseEntity.status(HttpStatus.CREATED).body(repo.save(newToDo.copy(id = id)))
         }
-    }
 
     @DeleteMapping("/{id}")
     fun delete(@PathVariable id: Long): ResponseEntity<Any> {
