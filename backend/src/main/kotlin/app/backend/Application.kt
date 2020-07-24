@@ -10,18 +10,8 @@ import org.springframework.web.bind.annotation.GetMapping
 @Controller
 class Application {
 
-
     @GetMapping
     fun start(): String = "index.html"
-
-    // fill db with some data on startup
-//    @Bean
-//    fun fillDB(repository: ToDoRepository) = CommandLineRunner {
-//        repository.save(ToDoEntity(text = "making fritz2 great"))
-//        repository.save(ToDoEntity(text = "fixed as much bugs as possible"))
-//        repository.save(ToDoEntity(text = "build some new examples with fritz2"))
-//        repository.save(ToDoEntity(text = "produce better code"))
-//    }
 
 }
 
