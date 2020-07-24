@@ -46,7 +46,7 @@ class ToDoController(val repo: ToDoRepository) {
         } else if(!ToDoValidator.isValid(newToDo.toToDo(), Unit)) {
             ResponseEntity.status(HttpStatus.BAD_REQUEST).body(mapOf("error" to "data is not valid"))
         } else {
-            logger.info("update ToDo with $id to: $newToDo")
+            logger.info("update ToDo[id=$id] to: $newToDo")
             ResponseEntity.status(HttpStatus.CREATED).body(repo.save(newToDo.copy(id = id)))
         }
 
