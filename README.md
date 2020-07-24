@@ -3,11 +3,12 @@
 # Spring TodoMVC
 
 This project is an example for using [fritz2](https://www.fritz2.dev/) with in a spring boot-web application.
-It will demonstrate how-to interact in fritz2 with a backend application.
+It will demonstrate how-to interact with a backend application in fritz2 and how-to setup this kind of project.
 
-This project consists of sub projects "app" and "backend". The "app" project is a kotlin multi platform project 
-which contains the client-site model and application. 
-The "backend" project is the spring boot 2 web-application.
+This project consists of two sub-projects "app" and "backend". 
+The "app" project is a kotlin multi platform project which contains the client-site model and application. 
+The "backend" project is the spring boot 2 web-application and contains all the server-side code.
+For using some shared parts of the "app" the "backend" has a dependence to the `commonMain` section of the "app" project.
 
 This project uses the following libraries:
 * [fritz2](https://github.com/jwstegemann/fritz2) 
@@ -17,7 +18,7 @@ This project uses the following libraries:
 * [Spring Framework](https://start.spring.io/) 
 - by using Spring Boot, Spring Web, Spring Data JPA in "backend"
 * [H2 Database](https://www.h2database.com/html/main.html) 
-- running as in-memory-db only in "backend" for storing the ToDos
+- running as in-memory-db which stores the data
 
 # Current status
 What is currently there:
@@ -28,6 +29,7 @@ What is currently there:
 
 What will come next:
 * using new stores provided by fritz2 for dealing with the remote API (less code)
+* more tests e.g. API-Tests...
 
 # Run
 To run this application you only need to run the following gradle task:
