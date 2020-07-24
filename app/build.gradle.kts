@@ -39,17 +39,10 @@ kotlin {
       }
     }
 
-    val jvmMain by getting {
+    val jsTest by getting {
       dependencies {
-        implementation(kotlin("stdlib-jdk8"))
-        implementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime:${project.extra.get("serializationVersion")}")
+        implementation(kotlin("test-js"))
       }
     }
-
-//    val jsTest by getting {
-//      dependencies {
-//        implementation(kotlin("test-js"))
-//      }
-//   }
   }
 }
