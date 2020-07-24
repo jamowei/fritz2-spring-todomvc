@@ -20,12 +20,12 @@ import kotlinx.serialization.UnstableDefault
 import kotlinx.serialization.builtins.list
 import kotlinx.serialization.json.Json
 
-data class Filter(val text: String, val function: (List<ToDo>) -> List<ToDo>)
+data class Filter(val text: String, val function: (List<Pair<ToDo, ToDoUiState>>) -> List<Pair<ToDo, ToDoUiState>>)
 
 val filters = mapOf(
     "/" to Filter("All") { it },
-    "/active" to Filter("Active") { toDos -> toDos.filter { it.status is Uncompleted } },
-    "/completed" to Filter("Completed") { toDos -> toDos.filter { it.status is Completed } }
+    "/active" to Filter("Active") { toDos -> toDos.filter { it.first.status is Uncompleted } },
+    "/completed" to Filter("Completed") { toDos -> toDos.filter { it.first.status is Completed } }
 )
 
 @UnstableDefault
@@ -138,23 +138,23 @@ fun main() {
                 toDos.validationMessages.map { warnings ->
                     warnings.map { it.msg }
                 }
-                .map {
-                    render {
-                        div {
-                            if (it.isNotEmpty()) {
-                                div("warnings") {
-                                    ul {
-                                        it.map { warning ->
-                                            li {
-                                                text(warning)
+                    .map {
+                        render {
+                            div {
+                                if (it.isNotEmpty()) {
+                                    div("warnings") {
+                                        ul {
+                                            it.map { warning ->
+                                                li {
+                                                    text(warning)
+                                                }
                                             }
                                         }
                                     }
                                 }
                             }
                         }
-                    }
-                }.bind()
+                    }.bind()
             }
             input("new-todo") {
                 placeholder = const("What needs to be done?")
@@ -177,30 +177,18 @@ fun main() {
                 text("Mark all as complete")
             }
             ul("todo-list") {
-                toDos.data.flatMapLatest { all ->
+                toDos.data.combine(uiStateStore.data) { toDos, uiStates ->
+                    toDos.zip(uiStates)
+                }.flatMapLatest { all ->
                     router.routes.map { route ->
                         filters[route]?.function?.invoke(all) ?: all
                     }
-                }
-                // Combine events from the two stores into a Pair
-                .combine(uiStateStore.data) { todos, uiState ->
-                    val states = uiState.map { it.id to it }.toMap()
-
-                    todos.map { todo ->
-                        todo to states.getOrElse(todo.id) {
-                            println("Couldn't find UI State for ID ${todo.id}, using default")
-                            ToDoUiState(todo.id, false)
-                        }
-                    }
-                }
-                .each { it.first.id }.map { combined ->
-                    val toDo = combined.first
-
-                    val todoLineStore = toDos.sub(toDo, { it.id })
+                }.each { it.first.id }.map { (toDo, uiState) ->
+                    val todoLineStore = toDos.sub(toDo, ToDo::id)
                     val textStore = todoLineStore.sub(L.ToDo.text)
                     val statusStore = todoLineStore.sub(L.ToDo.status)
 
-                    val stateLineStore = uiStateStore.sub(combined.second, { it.id })
+                    val stateLineStore = uiStateStore.sub(uiState, ToDoUiState::id)
                     val uiEditingStore = stateLineStore.sub(L.ToDoUiState.editing)
 
                     render {
