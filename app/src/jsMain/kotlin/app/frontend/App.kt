@@ -2,6 +2,8 @@ package app.frontend
 
 import app.model.L
 import app.model.ToDo
+import app.model.ToDoMessage
+import app.model.ToDoValidator
 import dev.fritz2.binding.*
 import dev.fritz2.dom.append
 import dev.fritz2.dom.html.HtmlElements
@@ -10,15 +12,18 @@ import dev.fritz2.dom.html.render
 import dev.fritz2.dom.key
 import dev.fritz2.dom.states
 import dev.fritz2.dom.values
-import dev.fritz2.remote.body
-import dev.fritz2.remote.onErrorLog
+import dev.fritz2.remote.getBody
 import dev.fritz2.remote.remote
 import dev.fritz2.routing.router
-import kotlinx.coroutines.*
+import dev.fritz2.validation.Validation
+import dev.fritz2.validation.Validator
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.*
 import kotlinx.serialization.UnstableDefault
 import kotlinx.serialization.builtins.list
 import kotlinx.serialization.json.Json
+import kotlin.time.ExperimentalTime
 
 data class Filter(val text: String, val function: (List<ToDo>) -> List<ToDo>)
 
@@ -29,6 +34,7 @@ val filters = mapOf(
 )
 
 @UnstableDefault
+@ExperimentalTime
 @ExperimentalCoroutinesApi
 @FlowPreview
 fun main() {
@@ -36,38 +42,56 @@ fun main() {
     val api = remote("/api/todos")
     val serializer = ToDo.serializer()
 
-    val toDos = object : RootStore<List<ToDo>>(listOf(), id = "todos", dropInitialData = true) {
+    val toDos = object : RootStore<List<ToDo>>(emptyList(), dropInitialData = true, id = "todos"),
+        Validation<ToDo, ToDoMessage, Unit> {
 
-        val load = apply<Unit, List<ToDo>> { _ ->
-            api.get().onErrorLog().body().map {
-                Json.parse(serializer.list, it)
-            }
-        } andThen handle { _, toDos -> toDos }
+        override val validator: Validator<ToDo, ToDoMessage, Unit> = ToDoValidator
 
-        val add = apply<String, ToDo?> { text ->
-            if (text.isNotEmpty()) { //TODO: add validation
-                api.contentType("application/json")
-                    .body(Json.stringify(serializer, ToDo(text = text)))
-                    .post().onErrorLog().body().map {
-                        Json.parse(serializer, it)
-                    }
-            }
-            else flowOf(null)
-        } andThen handle { toDos, toDo ->
-            if(toDo != null) toDos + toDo else toDos
+        val load = handle {
+            runCatching {
+                Json.parse(serializer.list, api.get().getBody())
+            }.getOrDefault(emptyList())
         }
 
-        val remove = apply<String, String> { id ->
-            api.delete(id).onErrorLog().map { id }
-        } andThen handle { toDos, id: String ->
+        val add = handle<String> { toDos, text ->
+            val newTodo = ToDo(text = text)
+            if (validate(newTodo, Unit)) {
+                runCatching {
+                    toDos + Json.parse(
+                        serializer, api.contentType("application/json")
+                            .body(Json.stringify(serializer, newTodo))
+                            .post()
+                            .getBody()
+                    )
+                }.getOrDefault(toDos)
+            } else toDos
+        }
+
+        val remove = handle<Long> { toDos, id ->
+            runCatching {
+                api.delete(id.toString())
+            }
             toDos.filterNot { it.id == id }
         }
 
         val toggleAll = handle<Boolean> { toDos, toggle ->
-            toDos.map { it.copy(completed = toggle) }
+            toDos.map {
+                val toDo = it.copy(completed = toggle)
+                runCatching {
+                    api.contentType("application/json")
+                        .body(Json.stringify(serializer, toDo))
+                        .put(toDo.id.toString())
+                }
+                toDo
+            }
         }
 
         val clearCompleted = handle { toDos ->
+            runCatching {
+                toDos.filter { it.completed }.forEach {
+                    api.delete(it.id.toString())
+                }
+            }
             toDos.filterNot { it.completed }
         }
 
@@ -82,6 +106,15 @@ fun main() {
     val inputHeader = render {
         header {
             h1 { +"todos" }
+
+            toDos.validator.msgs.each(ToDoMessage::id).map {
+                render {
+                    div("alert") {
+                        +it.text
+                    }
+                }
+            }.bind()
+
             input("new-todo") {
                 placeholder = const("What needs to be done?")
                 autofocus = const(true)
@@ -104,11 +137,21 @@ fun main() {
             }
             ul("todo-list") {
                 toDos.data.flatMapLatest { all ->
-                    router.routes. map { route ->
+                    router.routes.map { route ->
                         filters[route]?.function?.invoke(all) ?: all
                     }
                 }.each(ToDo::id).map { toDo ->
                     val toDoStore = toDos.sub(toDo, ToDo::id)
+
+                    toDoStore.data.drop(1) handledBy toDoStore.handle { _, changedToDo ->
+                        runCatching {
+                            api.contentType("application/json")
+                                .body(Json.stringify(serializer, changedToDo))
+                                .put(changedToDo.id.toString())
+                        }
+                        changedToDo
+                    }
+
                     val textStore = toDoStore.sub(L.ToDo.text)
                     val completedStore = toDoStore.sub(L.ToDo.completed)
                     val editingStore = toDoStore.sub(L.ToDo.editing)
