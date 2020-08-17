@@ -13,15 +13,7 @@ class ToDoController(val repo: ToDoRepository) {
 
     private val logger: Logger = LoggerFactory.getLogger(this.javaClass)
 
-    private fun doWhenExists(id: Long, run: (ToDoEntity) -> Unit): ResponseEntity<Any> {
-        val toDo = repo.findById(id)
-        return if (toDo.isPresent) {
-            run(toDo.get())
-            ResponseEntity.status(HttpStatus.CREATED).build()
-        } else {
-            ResponseEntity.status(HttpStatus.BAD_REQUEST).body(mapOf("error" to "invalid id"))
-        }
-    }
+    private val validator = ToDoValidator()
 
 
     @GetMapping
@@ -32,7 +24,7 @@ class ToDoController(val repo: ToDoRepository) {
 
     @PostMapping
     fun add(@RequestBody toDo: ToDoEntity): ResponseEntity<Any> =
-        if (ToDoValidator.isValid(toDo.toToDo(), Unit)) {
+        if (validator.isValid(toDo.toToDo(), Unit)) {
             logger.info("save new ToDo: $toDo")
             ResponseEntity.status(HttpStatus.CREATED).body(repo.save(toDo.copy(id = -1)))
         } else {
@@ -43,7 +35,7 @@ class ToDoController(val repo: ToDoRepository) {
     fun update(@PathVariable id: Long, @RequestBody newToDo: ToDoEntity): ResponseEntity<*> =
         if (repo.findById(id).isEmpty) {
             ResponseEntity.status(HttpStatus.BAD_REQUEST).body(mapOf("error" to "invalid id"))
-        } else if(!ToDoValidator.isValid(newToDo.toToDo(), Unit)) {
+        } else if (!validator.isValid(newToDo.toToDo(), Unit)) {
             ResponseEntity.status(HttpStatus.BAD_REQUEST).body(mapOf("error" to "data is not valid"))
         } else {
             logger.info("update ToDo[id=$id] to: $newToDo")

@@ -7,8 +7,6 @@ plugins {
 repositories {
   mavenCentral()
   jcenter()
-  // FIXME: remove if fritz2 0.7 is released
-  maven("https://oss.jfrog.org/artifactory/jfrog-dependencies")
 }
 
 kotlin {
@@ -21,7 +19,6 @@ kotlin {
       dependencies {
         implementation(kotlin("stdlib"))
         implementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime-common:${project.extra.get("serializationVersion")}")
-        api("dev.fritz2:core:${project.extra.get("fritz2Version")}")
       }
     }
 

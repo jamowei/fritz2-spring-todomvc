@@ -18,6 +18,7 @@ repositories {
 
 dependencies {
   implementation(project(":app"))
+  implementation("dev.fritz2:core:0.7")
 
   implementation("org.springframework.boot:spring-boot-starter-web")
   implementation("org.springframework.boot:spring-boot-starter-data-jpa")
