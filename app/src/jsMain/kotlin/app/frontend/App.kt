@@ -1,10 +1,7 @@
 package app.frontend
 
 import app.model.*
-import dev.fritz2.binding.RootStore
-import dev.fritz2.binding.detach
-import dev.fritz2.binding.invoke
-import dev.fritz2.binding.watch
+import dev.fritz2.binding.*
 import dev.fritz2.dom.append
 import dev.fritz2.dom.html.Keys
 import dev.fritz2.dom.html.RenderContext
@@ -13,6 +10,7 @@ import dev.fritz2.dom.key
 import dev.fritz2.dom.states
 import dev.fritz2.dom.values
 import dev.fritz2.repositories.Resource
+import dev.fritz2.repositories.rest.restEntity
 import dev.fritz2.repositories.rest.restQuery
 import dev.fritz2.routing.router
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -32,61 +30,78 @@ val toDoResource = Resource(
     ToDo()
 )
 
-@ExperimentalCoroutinesApi
-fun main() {
+const val endpoint = "/api/todos"
+val validator = ToDoValidator()
+val router = router("all")
 
-    val router = router("all")
+object ToDoListStore : RootStore<List<ToDo>>(emptyList(), id = "todos") {
 
-    val toDos = object : RootStore<List<ToDo>>(emptyList(), id = "todos") {
+    private val query = restQuery<ToDo, Long, Unit>(toDoResource, endpoint)
 
-        val query = restQuery<ToDo, Long, Unit>(toDoResource, "/api/todos")
-        val validator = ToDoValidator()
+    val add = handle<String> { toDos, text ->
+        val newTodo = ToDo(text = text)
+        if (validator.isValid(newTodo, Unit))
+            query.addOrUpdate(toDos, newTodo)
+        else toDos
+    }
 
-        val load = handle(execute = query::query)
+    val remove = handle { toDos, id: Long ->
+        query.delete(toDos, id)
+    }
 
-        val add = handle<String> { toDos, text ->
-            val newTodo = ToDo(text = text)
-            if (validator.isValid(newTodo, Unit))
-                query.addOrUpdate(toDos, newTodo)
-            else toDos
-        }
+    val toggleAll = handle { toDos, toggle: Boolean ->
+        query.updateMany(toDos, toDos.mapNotNull {
+            if(it.completed != toggle) it.copy(completed = toggle) else null
+        })
+    }
 
-        val remove = handle { toDos, id: Long ->
-            query.delete(toDos, id)
-        }
-
-        val toggleAll = handle { toDos, toggle: Boolean ->
-            query.updateMany(toDos, toDos.mapNotNull {
-                if (it.completed != toggle) it.copy(completed = toggle) else null
-            })
-        }
-
-        val clearCompleted = handle { toDos ->
-            toDos.partition(ToDo::completed).let { (completed, uncompleted) ->
-                query.delete(toDos, completed.map(ToDo::id))
-                uncompleted
-            }
-        }
-
-        val addOrUpdate = handle<ToDo> { toDos, toDo ->
-            if (validator.isValid(toDo, Unit)) query.addOrUpdate(toDos, toDo)
-            else toDos
-        }
-
-        val count = data.map { todos -> todos.count { !it.completed } }.distinctUntilChanged()
-        val empty = data.map { it.isEmpty() }.distinctUntilChanged()
-        val allChecked = data.map { todos -> todos.isNotEmpty() && todos.all { it.completed } }.distinctUntilChanged()
-
-        init {
-            load()
+    val clearCompleted = handle { toDos ->
+        toDos.partition(ToDo::completed).let { (completed, uncompleted) ->
+            query.delete(toDos, completed.map(ToDo::id))
+            uncompleted
         }
     }
+
+    val count = data.map { todos -> todos.count { !it.completed } }.distinctUntilChanged()
+    val empty = data.map { it.isEmpty() }.distinctUntilChanged()
+    val allChecked = data.map { todos -> todos.isNotEmpty() && todos.all { it.completed } }.distinctUntilChanged()
+
+    init {
+        handle(execute = query::query)()
+    }
+}
+
+class ToDoStore(toDo: ToDo): RootStore<ToDo>(toDo) {
+    private val entity = restEntity(toDoResource, endpoint)
+
+    private val save = handle { old, new: ToDo ->
+        if (validator.isValid(new, Unit)) entity.addOrUpdate(new)
+        old
+    }
+
+    init {
+        syncBy(save)
+    }
+}
+
+fun RenderContext.filter(text: String, route: String) {
+    li {
+        a {
+            className(router.map { if (it == route) "selected" else "" })
+            href("#$route")
+            +text
+        }
+    }
+}
+
+@ExperimentalCoroutinesApi
+fun main() {
 
     val inputHeader = render {
         header {
             h1 { +"todos" }
 
-            toDos.validator.msgs.renderEach(ToDoMessage::id) {
+            validator.msgs.renderEach(ToDoMessage::id) {
                 div("alert") {
                     +it.text
                 }
@@ -96,7 +111,30 @@ fun main() {
                 placeholder("What needs to be done?")
                 autofocus(true)
 
-                changes.values().onEach { domNode.value = "" } handledBy toDos.add
+                changes.values().onEach { domNode.value = "" } handledBy ToDoListStore.add
+            }
+        }
+    }
+
+    val appFooter = render {
+        footer("footer") {
+            className(ToDoListStore.empty.map { if (it) "hidden" else "" })
+
+            span("todo-count") {
+                strong {
+                    ToDoListStore.count.map {
+                        "$it item${if (it != 1) "s" else ""} left"
+                    }.asText()
+                }
+            }
+
+            ul("filters") {
+                filters.forEach { filter(it.value.text, it.key) }
+            }
+            button("clear-completed") {
+                +"Clear completed"
+
+                clicks handledBy ToDoListStore.clearCompleted
             }
         }
     }
@@ -105,21 +143,19 @@ fun main() {
         section("main") {
             input("toggle-all", id = "toggle-all") {
                 type("checkbox")
-                checked(toDos.allChecked)
+                checked(ToDoListStore.allChecked)
 
-                changes.states() handledBy toDos.toggleAll
+                changes.states() handledBy ToDoListStore.toggleAll
             }
             label {
                 `for`("toggle-all")
                 +"Mark all as complete"
             }
             ul("todo-list") {
-                toDos.data.combine(router) { all, route ->
+                ToDoListStore.data.combine(router) { all, route ->
                     filters[route]?.function?.invoke(all) ?: all
                 }.renderEach(ToDo::id) { toDo ->
-                    val toDoStore = toDos.detach(toDo, ToDo::id)
-                    toDoStore.syncBy(toDos.addOrUpdate)
-
+                    val toDoStore = ToDoStore(toDo)
                     val textStore = toDoStore.sub(L.ToDo.text)
                     val completedStore = toDoStore.sub(L.ToDo.completed)
 
@@ -146,7 +182,7 @@ fun main() {
                                 dblclicks.map { true } handledBy editingStore.update
                             }
                             button("destroy") {
-                                clicks.events.map { toDo.id } handledBy toDos.remove
+                                clicks.events.map { toDo.id } handledBy ToDoListStore.remove
                             }
                         }
                         input("edit") {
@@ -167,39 +203,6 @@ fun main() {
                         }
                     }
                 }
-            }
-        }
-    }
-
-    fun RenderContext.filter(text: String, route: String) {
-        li {
-            a {
-                className(router.map { if (it == route) "selected" else "" })
-                href("#$route")
-                +text
-            }
-        }
-    }
-
-    val appFooter = render {
-        footer("footer") {
-            className(toDos.empty.map { if (it) "hidden" else "" })
-
-            span("todo-count") {
-                strong {
-                    toDos.count.map {
-                        "$it item${if (it != 1) "s" else ""} left"
-                    }.asText()
-                }
-            }
-
-            ul("filters") {
-                filters.forEach { filter(it.value.text, it.key) }
-            }
-            button("clear-completed") {
-                +"Clear completed"
-
-                clicks handledBy toDos.clearCompleted
             }
         }
     }
