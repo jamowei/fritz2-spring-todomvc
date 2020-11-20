@@ -27,10 +27,6 @@ What is currently there:
 * complete gradle configuration
 * some tests
 
-What will come next:
-* using new stores provided by fritz2 for dealing with the remote API (less code)
-* more tests e.g. API-Tests...
-
 # Run
 To run this application you only need to run the following gradle task:
 ```

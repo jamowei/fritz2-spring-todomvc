@@ -11,14 +11,9 @@ plugins {
 
 java.sourceCompatibility = JavaVersion.VERSION_11
 
-repositories {
-  mavenCentral()
-  jcenter()
-}
-
 dependencies {
   implementation(project(":app"))
-  implementation("dev.fritz2:core:0.7")
+  implementation("dev.fritz2:core:0.8-SNAPSHOT")
 
   implementation("org.springframework.boot:spring-boot-starter-web")
   implementation("org.springframework.boot:spring-boot-starter-data-jpa")

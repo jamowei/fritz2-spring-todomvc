@@ -4,11 +4,6 @@ plugins {
   id("dev.fritz2.fritz2-gradle")
 }
 
-repositories {
-  mavenCentral()
-  jcenter()
-}
-
 kotlin {
   jvm()
   js().browser()
@@ -17,8 +12,10 @@ kotlin {
 
     val commonMain by getting {
       dependencies {
+        //FIXME: remove before release
+        implementation("dev.fritz2:core:0.8-SNAPSHOT")
         implementation(kotlin("stdlib"))
-        implementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime-common:${project.extra.get("serializationVersion")}")
+        implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:${project.extra.get("serializationVersion")}")
       }
     }
 
@@ -29,22 +26,9 @@ kotlin {
       }
     }
 
-    val jsMain by getting {
-      dependencies {
-        implementation(kotlin("stdlib-js"))
-        implementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime-js:${project.extra.get("serializationVersion")}")
-      }
-    }
-
     val jsTest by getting {
       dependencies {
         implementation(kotlin("test-js"))
-      }
-    }
-
-    val jvmMain by getting {
-      dependencies {
-        implementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime:${project.extra.get("serializationVersion")}")
       }
     }
   }
