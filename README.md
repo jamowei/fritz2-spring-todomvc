@@ -11,14 +11,10 @@ The "backend" project is the spring boot 2 web-application and contains all the 
 For using some shared parts of the "app" the "backend" has a dependence to the `commonMain` section of the "app" project.
 
 This project uses the following libraries:
-* [fritz2](https://github.com/jwstegemann/fritz2) 
- - mainly in "app", except validation and model in both sides
-* [kotlinx.serialization](https://github.com/Kotlin/kotlinx.serialization) 
- - currently, only in "app" because there is no official support for spring web yet
-* [Spring Framework](https://start.spring.io/) 
-- by using Spring Boot, Spring Web, Spring Data JPA in "backend"
-* [H2 Database](https://www.h2database.com/html/main.html) 
-- running as in-memory-db which stores the data
+* [fritz2](https://github.com/jwstegemann/fritz2) - mainly in "app", except validation and model in both sides
+* [kotlinx.serialization](https://github.com/Kotlin/kotlinx.serialization) - currently, only in "app" because there is no official support for spring web yet
+* [Spring Framework](https://start.spring.io/) - by using Spring Boot, Spring Web, Spring Data JPA in "backend"
+* [H2 Database](https://www.h2database.com/html/main.html) - running as in-memory-db which stores the data
 
 # Current status
 What is currently there:
@@ -26,10 +22,6 @@ What is currently there:
 * working validation provided by fritz2 extension on client- and server-side
 * complete gradle configuration
 * some tests
-
-What will come next:
-* using new stores provided by fritz2 for dealing with the remote API (less code)
-* more tests e.g. API-Tests...
 
 # Run
 To run this application you only need to run the following gradle task:
