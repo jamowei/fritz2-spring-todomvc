@@ -12,8 +12,6 @@ kotlin {
 
     val commonMain by getting {
       dependencies {
-        //FIXME: remove before release
-        implementation("dev.fritz2:core:0.8-SNAPSHOT")
         implementation(kotlin("stdlib"))
         implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:${project.extra.get("serializationVersion")}")
       }

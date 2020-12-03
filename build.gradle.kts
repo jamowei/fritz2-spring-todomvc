@@ -3,22 +3,19 @@ allprojects {
   version = "0.0.1-SNAPSHOT"
 }
 
-
-
 subprojects {
 
   repositories {
     jcenter()
+    maven("https://dl.bintray.com/jwstegemann/fritz2")
     mavenCentral()
-    //FIXME: remove before release
-    maven("https://oss.jfrog.org/artifactory/jfrog-dependencies")
   }
 
   extra.set("serializationVersion", "1.0.1")
 }
 
 plugins {
-  val fritz2Version = "0.7.1"
+  val fritz2Version = "0.8"
   val kotlinVersion = "1.4.10"
   val springBootVersion = "2.4.0"
   val springBootDependencyManagementVersion = "1.0.10.RELEASE"
