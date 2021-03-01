@@ -1,22 +1,22 @@
 allprojects {
   group = "dev.fritz2"
-  version = "0.0.1-SNAPSHOT"
+  version = "1.0"
 }
 
 subprojects {
-
   repositories {
+    maven("https://oss.jfrog.org/artifactory/jfrog-dependencies")
     jcenter()
     maven("https://dl.bintray.com/jwstegemann/fritz2")
     mavenCentral()
   }
 
-  extra.set("serializationVersion", "1.0.1")
+  extra.set("serializationVersion", "1.1.0")
 }
 
 plugins {
   val fritz2Version = "0.8"
-  val kotlinVersion = "1.4.10"
+  val kotlinVersion = "1.4.30"
   val springBootVersion = "2.4.0"
   val springBootDependencyManagementVersion = "1.0.10.RELEASE"
   id("dev.fritz2.fritz2-gradle") version fritz2Version apply false
