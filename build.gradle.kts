@@ -15,7 +15,7 @@ subprojects {
 }
 
 plugins {
-  val fritz2Version = "0.8"
+  val fritz2Version = "0.9-SNAPSHOT"
   val kotlinVersion = "1.4.30"
   val springBootVersion = "2.4.0"
   val springBootDependencyManagementVersion = "1.0.10.RELEASE"
