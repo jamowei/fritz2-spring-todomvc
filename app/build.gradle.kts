@@ -6,14 +6,16 @@ plugins {
 
 kotlin {
   jvm()
-  js().browser()
+  js(IR) {
+    browser()
+  }.binaries.executable()
 
   sourceSets {
 
     val commonMain by getting {
       dependencies {
-        implementation(kotlin("stdlib"))
-        implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:${project.extra.get("serializationVersion")}")
+        implementation("dev.fritz2:core:${project.extra["fritz2Version"]}")
+        implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:${project.extra["serializationVersion"]}")
       }
     }
 
