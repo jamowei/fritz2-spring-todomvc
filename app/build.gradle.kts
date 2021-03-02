@@ -14,8 +14,8 @@ kotlin {
 
     val commonMain by getting {
       dependencies {
-        implementation("dev.fritz2:core:0.9-SNAPSHOT")
-        implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:${project.extra.get("serializationVersion")}")
+        implementation("dev.fritz2:core:${project.extra["fritz2Version"]}")
+        implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:${project.extra["serializationVersion"]}")
       }
     }
 

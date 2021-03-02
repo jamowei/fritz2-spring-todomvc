@@ -13,7 +13,7 @@ java.sourceCompatibility = JavaVersion.VERSION_11
 
 dependencies {
   implementation(project(":app"))
-  implementation("dev.fritz2:core:0.9-SNAPSHOT")
+  implementation("dev.fritz2:core:${project.extra["fritz2Version"]}")
 
   implementation("org.springframework.boot:spring-boot-starter-web")
   implementation("org.springframework.boot:spring-boot-starter-data-jpa")
