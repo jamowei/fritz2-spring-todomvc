@@ -7,7 +7,16 @@ plugins {
 kotlin {
   jvm()
   js(IR) {
-    browser()
+    browser {
+      runTask {
+        devServer = devServer?.copy(
+          port = 9000,
+          proxy = mapOf(
+            "/api/todos" to "http://localhost:8080"
+          )
+        )
+      }
+    }
   }.binaries.executable()
 
   sourceSets {
