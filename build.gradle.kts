@@ -5,8 +5,6 @@ allprojects {
 
 subprojects {
   repositories {
-    jcenter()
-    maven("https://dl.bintray.com/jwstegemann/fritz2")
     mavenCentral()
   }
 
