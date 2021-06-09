@@ -8,15 +8,15 @@ subprojects {
     mavenCentral()
   }
 
-  extra.set("serializationVersion", "1.1.0")
-  extra.set("fritz2Version", "0.9")
+  extra.set("serializationVersion", "1.2.1")
+  extra.set("fritz2Version", "0.11")
 }
 
 plugins {
-  val kotlinVersion = "1.4.30"
-  val springBootVersion = "2.4.0"
-  val springBootDependencyManagementVersion = "1.0.10.RELEASE"
-  id("dev.fritz2.fritz2-gradle") version "0.9" apply false
+  val kotlinVersion = "1.5.10"
+  val springBootVersion = "2.5.0"
+  val springBootDependencyManagementVersion = "1.0.11.RELEASE"
+  id("dev.fritz2.fritz2-gradle") version "0.11" apply false
   kotlin("multiplatform") version kotlinVersion apply false
   kotlin("js") version kotlinVersion apply false
   kotlin("jvm") version kotlinVersion apply false

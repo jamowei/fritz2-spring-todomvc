@@ -11,7 +11,7 @@ kotlin {
       runTask {
         devServer = devServer?.copy(
           port = 9000,
-          proxy = mapOf(
+          proxy = mutableMapOf(
             "/api/todos" to "http://localhost:8080"
           )
         )
@@ -23,7 +23,6 @@ kotlin {
 
     val commonMain by getting {
       dependencies {
-        implementation("dev.fritz2:core:${project.extra["fritz2Version"]}")
         implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:${project.extra["serializationVersion"]}")
       }
     }
